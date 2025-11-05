@@ -27,6 +27,7 @@ from torch.optim import Adam
 from torch.utils.data import DataLoader, Subset, random_split
 
 import sys
+import shutil
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
@@ -253,7 +254,7 @@ def main() -> None:
         )
         if val_cer < best_cer:
             best_cer = val_cer
-            torch.save(checkpoint_path.read_bytes(), args.output_dir / "best.pt")
+            shutil.copy2(checkpoint_path, args.output_dir / "best.pt")
 
 
 if __name__ == "__main__":

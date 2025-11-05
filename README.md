@@ -51,9 +51,43 @@ python scripts/train_crnn.py \
   --batch-size 32 \
   --learning-rate 1e-3 \
   --output-dir artifacts/models/crnn \
-  --device cuda:0
+  --device cuda:1
 ```
 
 - 训练前请确保字符集文件已通过上一节命令生成。
 - `--val-split` 默认划分 2% 样本用于验证，可按需调整；其余超参可根据显存与项目需求调整。
 - 训练脚本会在每个 epoch 后评估验证集损失与 CER（字符错误率），并在验证集指标刷新时更新 `best.pt` 备份。
+
+## 模型评估
+
+使用最佳权重对数据集进行整体评估，并输出样例预测：
+
+```
+python scripts/evaluate_crnn.py \
+  --dataset-root artifacts/full_dataset \
+  --labels artifacts/full_dataset/labels.tsv \
+  --charset artifacts/full_dataset/charset.json \
+  --checkpoint artifacts/models/crnn/best.pt \
+  --batch-size 64 \
+  --device cuda:1 \
+  --report-samples 10
+```
+
+- 若只想快速抽样验证，可添加 `--max-samples 2000` 等参数限制样本量。
+- 输出中会给出平均 CTC loss、CER，以及若干预测与参考文本对照，可用于分析错误类型。
+- 若需在 CPU 上验证，将 `--device` 改为 `cpu` 即可。
+
+## 端到端推理
+
+对任意单张 IPA 图像执行推理：
+
+```
+python scripts/infer_crnn.py \
+  --image artifacts/sample_dataset/images/00000_00.png \
+  --charset artifacts/full_dataset/charset.json \
+  --checkpoint artifacts/models/crnn/best.pt \
+  --device cuda:1
+```
+
+- 图片会被缩放到训练时的分辨率（默认 384×128），输出预测的 IPA 字符串。若你的图片尺寸不同，可通过 `--image-width`/`--image-height` 调整预处理。
+- 同样可改 `--device` 为 `cpu` 或其它 GPU 索引。
