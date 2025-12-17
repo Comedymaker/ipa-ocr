@@ -4,7 +4,7 @@ Generate a labeled IPA OCR dataset by rendering text samples to images with augm
 
 Example usage:
     python scripts/generate_ipa_dataset.py \\
-        --csv data/IPA/ipa_list.csv \\
+        --csv data/ipa_list.csv \\
         --output-dir artifacts/ipa_dataset \\
         --samples-per-text 3 \\
         --max-samples 1000
@@ -25,10 +25,10 @@ from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 
 DEFAULT_FONTS = [
-    "data/IPA/CharisSIL-Regular.ttf",
-    "data/IPA/CharisSIL-Bold.ttf",
-    "data/IPA/CharisSIL-Italic.ttf",
-    "data/IPA/IpaPanNew.ttf",
+    "data/CharisSIL-Regular.ttf",
+    "data/CharisSIL-Bold.ttf",
+    "data/CharisSIL-Italic.ttf",
+    "data/IpaPanNew.ttf",
 ]
 
 

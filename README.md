@@ -2,11 +2,11 @@
 
 ## 数据集生成
 
-使用下列命令从 `data/IPA/ipa_list.csv` 渲染完整的国际音标 OCR 训练集（默认两张增强样本/条目，图像保存在 `artifacts/full_dataset/images/`，标签写入 `labels.tsv`，同时输出生成参数到 `metadata.json`）：
+使用下列命令从 `data/ipa_list.csv` 渲染完整的国际音标 OCR 训练集（默认两张增强样本/条目，图像保存在 `artifacts/full_dataset/images/`，标签写入 `labels.tsv`，同时输出生成参数到 `metadata.json`）：
 
 ```
 python scripts/generate_ipa_dataset.py \
-  --csv data/IPA/ipa_list.csv \
+  --csv data/ipa_list.csv \
   --output-dir artifacts/full_dataset \
   --canvas-width 384 \
   --canvas-height 128 \
@@ -15,6 +15,20 @@ python scripts/generate_ipa_dataset.py \
 ```
 
 > 提示：生成过程中图像数量较大（约 17 万张，单次运行可能持续数小时），建议先清空旧输出目录 `rm -rf artifacts/full_dataset`，并搭配 `nohup … &` 或 `tmux/screen` 等工具保持任务不中断。若需要分批生成，可通过 `--max-samples` 参数拆分为若干子任务。以上流程的后续步骤也将同步记录在此文档中，便于按顺序执行。
+
+### 验证集抽样
+
+若需要一个较小的验证集，可以从完整数据集中随机抽样若干条目（默认 2000 条），生成一个独立的 `labels.tsv` 与 `images/` 目录：
+
+```
+python scripts/create_val_subset.py \
+  --source-root artifacts/full_dataset \
+  --output-dir artifacts/val_subset \
+  --count 2000
+```
+
+- 可通过 `--fraction 0.01` 等参数按比例采样，或调节 `--count` 控制样本数量；若需多次运行到同一目录，添加 `--force` 以覆盖。
+- 输出目录结构与训练集一致，因此可直接在训练/评估脚本中将 `--dataset-root`/`--labels` 指向该验证集。
 
 ## OCR 模型设计与准备
 
@@ -51,7 +65,7 @@ python scripts/train_crnn.py \
   --batch-size 32 \
   --learning-rate 1e-3 \
   --output-dir artifacts/models/crnn \
-  --device cuda:1
+  --device cuda:0
 ```
 
 - 训练前请确保字符集文件已通过上一节命令生成。
@@ -64,15 +78,17 @@ python scripts/train_crnn.py \
 
 ```
 python scripts/evaluate_crnn.py \
-  --dataset-root artifacts/full_dataset \
-  --labels artifacts/full_dataset/labels.tsv \
+  --dataset-root artifacts/val_subset \
+  --labels artifacts/val_subset/labels.tsv \
   --charset artifacts/full_dataset/charset.json \
   --checkpoint artifacts/models/crnn/best.pt \
   --batch-size 64 \
-  --device cuda:1 \
-  --report-samples 10
+  --device cuda:0 \
+  --report-samples 5
+
 ```
 
+- 若需在抽样验证集上评估，请将 `--dataset-root` 与 `--labels` 同时替换为 `artifacts/val_subset`；不要混合不同目录，否则标签内的相对路径会指向不存在的图像。
 - 若只想快速抽样验证，可添加 `--max-samples 2000` 等参数限制样本量。
 - 输出中会给出平均 CTC loss、CER，以及若干预测与参考文本对照，可用于分析错误类型。
 - 若需在 CPU 上验证，将 `--device` 改为 `cpu` 即可。
@@ -86,7 +102,7 @@ python scripts/infer_crnn.py \
   --image artifacts/sample_dataset/images/00000_00.png \
   --charset artifacts/full_dataset/charset.json \
   --checkpoint artifacts/models/crnn/best.pt \
-  --device cuda:1
+  --device cuda:0
 ```
 
 - 图片会被缩放到训练时的分辨率（默认 384×128），输出预测的 IPA 字符串。若你的图片尺寸不同，可通过 `--image-width`/`--image-height` 调整预处理。
